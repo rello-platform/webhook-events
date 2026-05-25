@@ -1,0 +1,41 @@
+{
+  "name": "@rello-platform/webhook-events",
+  "version": "0.1.0",
+  "description": "Canonical Rello-emitted outbound webhook event-type registry (union + lifecycle metadata + runtime guard) for the Rello platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "comment:exports": "Rello consumes this in a Next/CJS-interop context. The build stays single-format ESM ON PURPOSE; we expose the SAME ESM entry under `require`/`default` so a CJS consumer cannot crash with ERR_PACKAGE_PATH_NOT_EXPORTED. Node >=22.12 require(esm) loads it (no top-level await). Mirrors @rello-platform/signals v0.8.0.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rello-platform/webhook-events.git"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
