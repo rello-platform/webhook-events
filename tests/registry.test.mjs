@@ -5,6 +5,8 @@ import {
   EXACT_REGISTRY,
   CANONICAL_WEBHOOK_EVENT_SET,
   isCanonicalWebhookEvent,
+  WEBHOOK_EVENT_FOLDS,
+  normalizeWebhookEvent,
 } from "../dist/index.js";
 
 // The canonical 28, verbatim from Rello webhook-events.ts @ d4a870fe.
@@ -113,5 +115,81 @@ describe("CANONICAL_WEBHOOK_EVENT_SET + isCanonicalWebhookEvent", () => {
     assert.equal(isCanonicalWebhookEvent("contact.updated"), false);
     assert.equal(isCanonicalWebhookEvent(""), false);
     assert.equal(isCanonicalWebhookEvent("LEAD.CREATED"), false);
+  });
+});
+
+describe("normalizeWebhookEvent — deterministic legacy → canonical folds", () => {
+  // The 8 D-K2-independent folds (every target ∈ the canonical 28).
+  const EXPECTED_FOLDS = {
+    "lead.stage_changed": "pipeline.stage_changed",
+    "contact.created": "lead.created",
+    "contact.updated": "lead.updated",
+    "contact.tag_added": "lead.tag_added",
+    "contact.tag_removed": "lead.tag_removed",
+    "contact.stage_changed": "pipeline.stage_changed",
+    "journey.enrollment_created": "journey.enrolled",
+    "journey.enrollment_completed": "journey.completed",
+  };
+
+  // Not pure 1→1 canonical folds — must return null (later / D-K2 / D-K3 waves).
+  const EXCLUDED_NON_FOLDS = [
+    "lead.tags_changed",
+    "app.activated",
+    "journey.step_executed",
+    "journey.enrollment_changed",
+    "harvesthome.lead_scored",
+  ];
+
+  it("fold map has exactly the 8 expected pairs", () => {
+    assert.deepEqual(
+      Object.keys(WEBHOOK_EVENT_FOLDS).sort(),
+      Object.keys(EXPECTED_FOLDS).sort(),
+    );
+  });
+
+  it("EVERY fold target is a member of the canonical 28", () => {
+    for (const target of Object.values(WEBHOOK_EVENT_FOLDS)) {
+      assert.ok(
+        CANONICAL_WEBHOOK_EVENT_SET.has(target),
+        `fold target ${target} is NOT canonical`,
+      );
+    }
+  });
+
+  it("each legacy input folds to its canonical target", () => {
+    for (const [legacy, canonical] of Object.entries(EXPECTED_FOLDS)) {
+      assert.equal(
+        normalizeWebhookEvent(legacy),
+        canonical,
+        `${legacy} should fold to ${canonical}`,
+      );
+    }
+  });
+
+  it("a canonical input normalizes to itself (incl. reserved)", () => {
+    for (const e of EXPECTED_28) {
+      assert.equal(normalizeWebhookEvent(e), e, `${e} should be unchanged`);
+    }
+  });
+
+  it("trims surrounding whitespace before resolving", () => {
+    assert.equal(normalizeWebhookEvent("  lead.created  "), "lead.created");
+    assert.equal(
+      normalizeWebhookEvent(" contact.updated "),
+      "lead.updated",
+    );
+  });
+
+  it("returns null for the EXCLUDED non-folds (left for later waves)", () => {
+    for (const e of EXCLUDED_NON_FOLDS) {
+      assert.equal(normalizeWebhookEvent(e), null, `${e} must NOT fold`);
+    }
+  });
+
+  it("returns null for true garbage / unknown events", () => {
+    assert.equal(normalizeWebhookEvent("totally.bogus"), null);
+    assert.equal(normalizeWebhookEvent(""), null);
+    assert.equal(normalizeWebhookEvent("LEAD.CREATED"), null);
+    assert.equal(normalizeWebhookEvent("contact"), null);
   });
 });
