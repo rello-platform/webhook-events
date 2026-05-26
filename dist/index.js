@@ -124,4 +124,64 @@ export const CANONICAL_WEBHOOK_EVENT_SET = new Set(WEBHOOK_EVENTS);
 export function isCanonicalWebhookEvent(raw) {
     return CANONICAL_WEBHOOK_EVENT_SET.has(raw);
 }
+/**
+ * Deterministic legacy → canonical fold map (Platform-Identifier-Drift-Guards
+ * SPEC §3.2, step B). Each KEY is a legacy event string Rello once emitted or a
+ * tenant once subscribed to; each VALUE is the canonical Rello-emitted event it
+ * folds to — and every value is a member of `WEBHOOK_EVENTS` (the canonical 28),
+ * so a fold can never produce a non-canonical result. This doubles as the
+ * documented retirement list for the legacy forms.
+ *
+ * The `contact.*` keys are the MarketIntel inbound-handler set (the recon
+ * under-inventoried them): the "lead not contact" platform rule means every
+ * `contact.<x>` legacy form folds to its `lead.<x>` / `pipeline.<x>` canonical.
+ *
+ * INTENTIONALLY NOT FOLDED (not pure 1→1 canonical folds — left for later /
+ * D-K2 / D-K3 waves; documented so the omission is a decision, not an oversight):
+ *   - `lead.tags_changed`            → a 1→2 split into `lead.tag_added` +
+ *                                      `lead.tag_removed` (OQ-2 handler rewrite,
+ *                                      not a fold).
+ *   - `app.activated`                → `app.<slug>.activated` — slug-dependent,
+ *                                      ambiguous without publisher context.
+ *   - `journey.step_executed`        → no clean canonical target.
+ *   - `journey.enrollment_changed`   → no clean canonical target.
+ *   - `harvesthome.lead_scored`      → `harvest-home.lead_scored` is a CROSS-SPOKE
+ *                                      namespaced event (PathfinderPro inbound
+ *                                      route), NOT in the canonical 28 and
+ *                                      D-K2-gated; folding it here would still be
+ *                                      rejected by the membership check and would
+ *                                      imply cross-spoke namespace registration.
+ */
+export const WEBHOOK_EVENT_FOLDS = {
+    "lead.stage_changed": "pipeline.stage_changed",
+    "contact.created": "lead.created",
+    "contact.updated": "lead.updated",
+    "contact.tag_added": "lead.tag_added",
+    "contact.tag_removed": "lead.tag_removed",
+    "contact.stage_changed": "pipeline.stage_changed",
+    "journey.enrollment_created": "journey.enrolled",
+    "journey.enrollment_completed": "journey.completed",
+};
+/**
+ * Normalize a raw event string to its canonical webhook event, or `null` if it
+ * is neither canonical nor a known legacy fold.
+ *
+ * Resolution order (deterministic, pure):
+ *   1. trim surrounding whitespace;
+ *   2. if already canonical (`isCanonicalWebhookEvent`) → return it unchanged;
+ *   3. else if it has a legacy fold → return the canonical target (∈ the 28);
+ *   4. else → `null` (truly-invalid; callers keep their existing reject path).
+ *
+ * Apply at boundaries that read a tenant- or wire-supplied event string (e.g.
+ * the subscription-create endpoint): fold-if-legacy, then membership-check, so
+ * a legacy subscription input stores its canonical form instead of 400ing while
+ * genuine garbage still fails.
+ */
+export function normalizeWebhookEvent(raw) {
+    const trimmed = raw.trim();
+    if (isCanonicalWebhookEvent(trimmed)) {
+        return trimmed;
+    }
+    return WEBHOOK_EVENT_FOLDS[trimmed] ?? null;
+}
 //# sourceMappingURL=index.js.map
