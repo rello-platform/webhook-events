@@ -1,6 +1,6 @@
 {
   "name": "@rello-platform/webhook-events",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Canonical Rello-emitted outbound webhook event-type registry (union + lifecycle metadata + runtime guard + legacy→canonical normalizer) for the Rello platform",
   "type": "module",
   "main": "./dist/index.js",
