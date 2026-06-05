@@ -57,9 +57,10 @@ export const WEBHOOK_EVENTS = [
     "rello.meeting_no_show",
     // RATE-ENGINE — the canonical tenant-agnostic market-move broadcast. Rello is
     // the SOLE publisher (AOM "Generic market-move rate.changed broadcast" row,
-    // 2026-06-04). Spokes Drumbeat / Home-Scout / Milo subscribe via
-    // WebhookEndpoint; paired with the `rello.rate_changed` internal signal type
-    // in @rello-platform/signals.
+    // 2026-06-04). Spokes Drumbeat / Home-Scout subscribe via WebhookEndpoint
+    // (Milo delivery path TBD — no `milo` key in APP_WEBHOOK_EVENTS, flagged for
+    // follow-up). ONE literal — `rate.changed` — shared with the internal signal
+    // type `rate.changed` in @rello-platform/signals (v0.12.0).
     "rate.changed",
 ];
 /**
