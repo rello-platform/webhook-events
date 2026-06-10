@@ -9,9 +9,9 @@ import {
   normalizeWebhookEvent,
 } from "../dist/index.js";
 
-// The canonical 30 = the original 28 (verbatim from Rello webhook-events.ts @
+// The canonical 31 = the original 28 (verbatim from Rello webhook-events.ts @
 // d4a870fe) + the RATE-ENGINE `rate.changed` market-move broadcast.
-const EXPECTED_30 = [
+const EXPECTED_31 = [
   "lead.created",
   "lead.updated",
   "lead.deleted",
@@ -45,6 +45,9 @@ const EXPECTED_30 = [
   // PHONE-DISCONNECTED (+1, v0.5.0): Twilio delivery-failure disconnected-class
   // emit (Q2). Harvest-Home subscribes.
   "rello.lead_phone_disconnected",
+  // OVEN-REFERRAL (+1, v0.6.0): signal-router forward of the inbound Home Scout
+  // referral signal. The Oven subscribes.
+  "home-scout.referral_submitted",
 ];
 
 // The phantom-7 — allowlisted but never emitted (SPEC OQ-1).
@@ -58,9 +61,9 @@ const EXPECTED_RESERVED = [
   "thread.archived",
 ];
 
-describe("WEBHOOK_EVENTS — canonical 30, byte-identical & ordered", () => {
-  it("is exactly the 30 events in declaration order", () => {
-    assert.deepEqual([...WEBHOOK_EVENTS], EXPECTED_30);
+describe("WEBHOOK_EVENTS — canonical 31, byte-identical & ordered", () => {
+  it("is exactly the 31 events in declaration order", () => {
+    assert.deepEqual([...WEBHOOK_EVENTS], EXPECTED_31);
   });
   it("has no duplicates", () => {
     assert.equal(new Set(WEBHOOK_EVENTS).size, WEBHOOK_EVENTS.length);
@@ -69,7 +72,7 @@ describe("WEBHOOK_EVENTS — canonical 30, byte-identical & ordered", () => {
 
 describe("EXACT_REGISTRY — per-key completeness & lifecycle partition", () => {
   it("has exactly one row per canonical event (no missing, no stray)", () => {
-    assert.deepEqual(Object.keys(EXACT_REGISTRY).sort(), [...EXPECTED_30].sort());
+    assert.deepEqual(Object.keys(EXACT_REGISTRY).sort(), [...EXPECTED_31].sort());
   });
   it("each row's `event` matches its key", () => {
     for (const [key, entry] of Object.entries(EXACT_REGISTRY)) {
@@ -91,27 +94,27 @@ describe("EXACT_REGISTRY — per-key completeness & lifecycle partition", () => 
       .sort();
     assert.deepEqual(reserved, [...EXPECTED_RESERVED].sort());
   });
-  it("partitions 23 active / 7 reserved", () => {
+  it("partitions 24 active / 7 reserved", () => {
     const active = Object.values(EXACT_REGISTRY).filter(
       (e) => e.lifecycle === "active",
     );
     const reserved = Object.values(EXACT_REGISTRY).filter(
       (e) => e.lifecycle === "reserved",
     );
-    assert.equal(active.length, 23);
+    assert.equal(active.length, 24);
     assert.equal(reserved.length, 7);
   });
 });
 
 describe("CANONICAL_WEBHOOK_EVENT_SET + isCanonicalWebhookEvent", () => {
   it("set mirrors the union exactly", () => {
-    assert.equal(CANONICAL_WEBHOOK_EVENT_SET.size, 30);
-    for (const e of EXPECTED_30) {
+    assert.equal(CANONICAL_WEBHOOK_EVENT_SET.size, 31);
+    for (const e of EXPECTED_31) {
       assert.ok(CANONICAL_WEBHOOK_EVENT_SET.has(e), `set missing ${e}`);
     }
   });
   it("guard accepts every canonical event (incl. reserved)", () => {
-    for (const e of EXPECTED_30) {
+    for (const e of EXPECTED_31) {
       assert.equal(isCanonicalWebhookEvent(e), true, `guard rejected ${e}`);
     }
   });
@@ -173,7 +176,7 @@ describe("normalizeWebhookEvent — deterministic legacy → canonical folds", (
   });
 
   it("a canonical input normalizes to itself (incl. reserved)", () => {
-    for (const e of EXPECTED_30) {
+    for (const e of EXPECTED_31) {
       assert.equal(normalizeWebhookEvent(e), e, `${e} should be unchanged`);
     }
   });

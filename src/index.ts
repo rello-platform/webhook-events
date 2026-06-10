@@ -71,6 +71,15 @@ export const WEBHOOK_EVENTS = [
   // literal — `rello.lead_phone_disconnected` — shared with the internal signal
   // type of the same name in @rello-platform/signals (v0.15.0).
   "rello.lead_phone_disconnected",
+  // OVEN-REFERRAL-TRACKING-REWARDS (v0.6.0) — Rello forwards the inbound
+  // Home Scout referral signal to webhook subscribers when the signal router
+  // receives it (`/api/signals/batch` → receiveSignal → forward). The Oven
+  // subscribes (APP_WEBHOOK_EVENTS["the-oven"]) and creates a Referral row
+  // from it. Delivery `data` = the signal's data verbatim + `leadId` injected
+  // (the referred person's Rello Lead.id). ONE literal —
+  // `home-scout.referral_submitted` — shared with the internal signal type of
+  // the same name in @rello-platform/signals.
+  "home-scout.referral_submitted",
 ] as const;
 
 /** The canonical outbound webhook event type — byte-identical to today's 28. */
@@ -155,6 +164,12 @@ export const EXACT_REGISTRY: Record<WebhookEvent, WebhookEventEntry> = {
   // webhook on disconnected-class delivery failure. Harvest-Home subscribes.
   "rello.lead_phone_disconnected": {
     event: "rello.lead_phone_disconnected",
+    lifecycle: "active",
+  },
+  // OVEN-REFERRAL-TRACKING-REWARDS — Rello-emitted signal-router forward of
+  // the inbound Home Scout referral signal. The Oven subscribes.
+  "home-scout.referral_submitted": {
+    event: "home-scout.referral_submitted",
     lifecycle: "active",
   },
 };

@@ -26,7 +26,7 @@
  * the SOURCE of the `WebhookEvent` union — it stays byte-identical to the set
  * Rello shipped so the migration is behavior-neutral.
  */
-export declare const WEBHOOK_EVENTS: readonly ["lead.created", "lead.updated", "lead.deleted", "lead.scored", "lead.tag_added", "lead.tag_removed", "pipeline.stage_changed", "task.created", "task.completed", "journey.enrolled", "journey.completed", "journey.exited", "messaging.sent", "messaging.delivered", "messaging.failed", "messaging.inbound", "messaging.bounced", "thread.created", "thread.archived", "agent.created", "agent.updated", "agent.deactivated", "agent.profile_updated", "credits.purchase.completed", "rello.meeting_booked", "rello.meeting_completed", "rello.meeting_canceled", "rello.meeting_no_show", "rate.changed", "rello.lead_phone_disconnected"];
+export declare const WEBHOOK_EVENTS: readonly ["lead.created", "lead.updated", "lead.deleted", "lead.scored", "lead.tag_added", "lead.tag_removed", "pipeline.stage_changed", "task.created", "task.completed", "journey.enrolled", "journey.completed", "journey.exited", "messaging.sent", "messaging.delivered", "messaging.failed", "messaging.inbound", "messaging.bounced", "thread.created", "thread.archived", "agent.created", "agent.updated", "agent.deactivated", "agent.profile_updated", "credits.purchase.completed", "rello.meeting_booked", "rello.meeting_completed", "rello.meeting_canceled", "rello.meeting_no_show", "rate.changed", "rello.lead_phone_disconnected", "home-scout.referral_submitted"];
 /** The canonical outbound webhook event type — byte-identical to today's 28. */
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 /** Lifecycle of a canonical webhook event. */
