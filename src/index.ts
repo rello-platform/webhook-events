@@ -63,6 +63,14 @@ export const WEBHOOK_EVENTS = [
   // follow-up). ONE literal — `rate.changed` — shared with the internal signal
   // type `rate.changed` in @rello-platform/signals (v0.12.0).
   "rate.changed",
+  // PHONE-DISCONNECTED (CROSS-REPO-WALK-DECISIONS-260609 Q2, v0.5.0) — Rello
+  // emits when a Twilio SMS delivery-status callback reports a terminal
+  // delivery failure with a disconnected-class ErrorCode (30003/30005/30006).
+  // Harvest-Home subscribes (APP_WEBHOOK_EVENTS["harvest-home"]) and routes the
+  // event to its ReplacementClaim checkPhoneDisconnected() receiver. ONE
+  // literal — `rello.lead_phone_disconnected` — shared with the internal signal
+  // type of the same name in @rello-platform/signals (v0.15.0).
+  "rello.lead_phone_disconnected",
 ] as const;
 
 /** The canonical outbound webhook event type — byte-identical to today's 28. */
@@ -143,6 +151,12 @@ export const EXACT_REGISTRY: Record<WebhookEvent, WebhookEventEntry> = {
   // (src/trigger/jobs/rate-data.ts). Active from go-live (Drumbeat / Home-Scout
   // / Milo subscribe via APP_WEBHOOK_EVENTS).
   "rate.changed": { event: "rate.changed", lifecycle: "active" },
+  // PHONE-DISCONNECTED (Q2) — Rello-emitted from the Twilio SMS delivery-status
+  // webhook on disconnected-class delivery failure. Harvest-Home subscribes.
+  "rello.lead_phone_disconnected": {
+    event: "rello.lead_phone_disconnected",
+    lifecycle: "active",
+  },
 };
 
 /**
