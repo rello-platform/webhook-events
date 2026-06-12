@@ -79,6 +79,19 @@ export const WEBHOOK_EVENTS = [
     // `home-scout.referral_submitted` — shared with the internal signal type of
     // the same name in @rello-platform/signals.
     "home-scout.referral_submitted",
+    // HOMEOWNER-LIFECYCLE-REHOME P1 (v0.7.0) — Rello emits when a BUY-SIDE
+    // (BUYER_REPRESENTED / DUAL_AGENCY) ClosingTransaction's CLOSING_DAY
+    // milestone completes (funded/recorded), carrying the NEW property identity.
+    // The Oven (HomeownerProfile repoint + value rebaseline), Open House Hub
+    // (old SellerListing close), and Harvest Home (hh_market_status advance)
+    // subscribe via APP_WEBHOOK_EVENTS. Delivery `data` mirrors the
+    // `relloHomePurchasedDataSchema` signal data block ({relloLeadId, tenantId,
+    // newPropertyAddress, newPropertyZip, purchasePrice, loanAmount|null,
+    // closeDate}) + an `idempotencyKey` for consumer-side replay dedup
+    // (consumer idempotency is keyed on closeDate + normalized newPropertyAddress
+    // per spec DL2). ONE literal — `rello.home_purchased` — shared with the
+    // internal signal type of the same name in @rello-platform/signals (v0.19.0).
+    "rello.home_purchased",
 ];
 /**
  * Canonical event → declarative entry, keyed by the literal union for
@@ -152,6 +165,13 @@ export const EXACT_REGISTRY = {
     // the inbound Home Scout referral signal. The Oven subscribes.
     "home-scout.referral_submitted": {
         event: "home-scout.referral_submitted",
+        lifecycle: "active",
+    },
+    // HOMEOWNER-LIFECYCLE-REHOME — Rello-emitted at the funded/recorded BUY-SIDE
+    // CLOSING_DAY milestone completion. The Oven / Open House Hub / Harvest Home
+    // subscribe.
+    "rello.home_purchased": {
+        event: "rello.home_purchased",
         lifecycle: "active",
     },
 };
