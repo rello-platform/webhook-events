@@ -93,6 +93,22 @@ export const WEBHOOK_EVENTS = [
   // per spec DL2). ONE literal — `rello.home_purchased` — shared with the
   // internal signal type of the same name in @rello-platform/signals (v0.19.0).
   "rello.home_purchased",
+  // HOMEOWNER-LIFECYCLE-REHOME "between-homes" / W1 U2b (v0.8.0) — Rello emits
+  // when a SELL-SIDE ClosingTransaction's CLOSING_DAY milestone completes
+  // (funded/recorded), carrying the SOLD property identity. Symmetric to
+  // `rello.home_purchased` (the buy-side close); the two together close the
+  // between-homes state in the Oven. ONLY The Oven subscribes — it has the
+  // inbound receiver (sets HomeownerProfile.lifecycleStatus = BETWEEN_HOMES,
+  // archives + suppresses the value/equity snapshot, idempotent on
+  // closeDate + normalized sold address via `lastSoldKey`). Open House Hub
+  // EMITS this event on its manual SellerListing→SOLD PATCH (completeness
+  // path) rather than consuming it, and Harvest Home has no consumer — so
+  // NEITHER subscribes (asymmetric to home_purchased, which Oven/OHH/HH all
+  // consume). Delivery `data` mirrors the `relloHomeSoldDataSchema` signal
+  // data block ({relloLeadId, tenantId, soldAddress, soldZip, salePrice,
+  // closeDate}). ONE literal — `rello.home_sold` — shared with the internal
+  // signal type of the same name in @rello-platform/signals (v0.27.0).
+  "rello.home_sold",
 ] as const;
 
 /** The canonical outbound webhook event type — byte-identical to today's 28. */
@@ -190,6 +206,13 @@ export const EXACT_REGISTRY: Record<WebhookEvent, WebhookEventEntry> = {
   // subscribe.
   "rello.home_purchased": {
     event: "rello.home_purchased",
+    lifecycle: "active",
+  },
+  // HOMEOWNER-LIFECYCLE-REHOME "between-homes" — Rello-emitted at the
+  // funded/recorded SELL-SIDE CLOSING_DAY milestone completion (and on OHH's
+  // manual SellerListing→SOLD completeness PATCH). ONLY The Oven subscribes.
+  "rello.home_sold": {
+    event: "rello.home_sold",
     lifecycle: "active",
   },
 };
