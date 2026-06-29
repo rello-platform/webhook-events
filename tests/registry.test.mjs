@@ -9,9 +9,10 @@ import {
   normalizeWebhookEvent,
 } from "../dist/index.js";
 
-// The canonical 31 = the original 28 (verbatim from Rello webhook-events.ts @
-// d4a870fe) + the RATE-ENGINE `rate.changed` market-move broadcast.
-const EXPECTED_32 = [
+// The canonical set = the original 28 (verbatim from Rello webhook-events.ts @
+// d4a870fe) + RATE-ENGINE `rate.changed` + PHONE-DISCONNECTED + OVEN-REFERRAL +
+// REHOME `home_purchased` (buy-side) + REHOME `home_sold` (sell-side) = 33.
+const EXPECTED_33 = [
   "lead.created",
   "lead.updated",
   "lead.deleted",
@@ -51,6 +52,10 @@ const EXPECTED_32 = [
   // HOMEOWNER-LIFECYCLE-REHOME (+1, v0.7.0): buy-side funded/recorded close
   // carrying the new property identity. Oven / OHH / Harvest-Home subscribe.
   "rello.home_purchased",
+  // HOMEOWNER-LIFECYCLE-REHOME "between-homes" (+1, v0.8.0): sell-side
+  // funded/recorded close carrying the sold property identity. ONLY The Oven
+  // subscribes (it has the receiver; OHH emits, HH has no consumer).
+  "rello.home_sold",
 ];
 
 // The phantom-7 — allowlisted but never emitted (SPEC OQ-1).
@@ -64,9 +69,9 @@ const EXPECTED_RESERVED = [
   "thread.archived",
 ];
 
-describe("WEBHOOK_EVENTS — canonical 32, byte-identical & ordered", () => {
-  it("is exactly the 32 events in declaration order", () => {
-    assert.deepEqual([...WEBHOOK_EVENTS], EXPECTED_32);
+describe("WEBHOOK_EVENTS — canonical 33, byte-identical & ordered", () => {
+  it("is exactly the 33 events in declaration order", () => {
+    assert.deepEqual([...WEBHOOK_EVENTS], EXPECTED_33);
   });
   it("has no duplicates", () => {
     assert.equal(new Set(WEBHOOK_EVENTS).size, WEBHOOK_EVENTS.length);
@@ -75,7 +80,7 @@ describe("WEBHOOK_EVENTS — canonical 32, byte-identical & ordered", () => {
 
 describe("EXACT_REGISTRY — per-key completeness & lifecycle partition", () => {
   it("has exactly one row per canonical event (no missing, no stray)", () => {
-    assert.deepEqual(Object.keys(EXACT_REGISTRY).sort(), [...EXPECTED_32].sort());
+    assert.deepEqual(Object.keys(EXACT_REGISTRY).sort(), [...EXPECTED_33].sort());
   });
   it("each row's `event` matches its key", () => {
     for (const [key, entry] of Object.entries(EXACT_REGISTRY)) {
@@ -97,27 +102,58 @@ describe("EXACT_REGISTRY — per-key completeness & lifecycle partition", () => 
       .sort();
     assert.deepEqual(reserved, [...EXPECTED_RESERVED].sort());
   });
-  it("partitions 25 active / 7 reserved", () => {
+  it("partitions 26 active / 7 reserved", () => {
     const active = Object.values(EXACT_REGISTRY).filter(
       (e) => e.lifecycle === "active",
     );
     const reserved = Object.values(EXACT_REGISTRY).filter(
       (e) => e.lifecycle === "reserved",
     );
-    assert.equal(active.length, 25);
+    assert.equal(active.length, 26);
     assert.equal(reserved.length, 7);
+  });
+});
+
+describe("rello.home_sold — REHOME between-homes registration (v0.8.0)", () => {
+  it("is registered in the canonical union + runtime set", () => {
+    assert.ok(
+      WEBHOOK_EVENTS.includes("rello.home_sold"),
+      "rello.home_sold missing from WEBHOOK_EVENTS",
+    );
+    assert.equal(isCanonicalWebhookEvent("rello.home_sold"), true);
+    assert.ok(CANONICAL_WEBHOOK_EVENT_SET.has("rello.home_sold"));
+  });
+  it("has an EXACT_REGISTRY row with lifecycle 'active' (Rello-emitted)", () => {
+    const entry = EXACT_REGISTRY["rello.home_sold"];
+    assert.ok(entry, "no EXACT_REGISTRY row for rello.home_sold");
+    assert.equal(entry.event, "rello.home_sold");
+    assert.equal(entry.lifecycle, "active");
+  });
+  it("is symmetric to its buy-side twin rello.home_purchased", () => {
+    assert.ok(WEBHOOK_EVENTS.includes("rello.home_purchased"));
+    assert.equal(
+      EXACT_REGISTRY["rello.home_sold"].lifecycle,
+      EXACT_REGISTRY["rello.home_purchased"].lifecycle,
+    );
+  });
+  it("normalizes to itself (canonical, not a legacy fold)", () => {
+    assert.equal(normalizeWebhookEvent("rello.home_sold"), "rello.home_sold");
+    assert.equal(
+      normalizeWebhookEvent("  rello.home_sold  "),
+      "rello.home_sold",
+    );
   });
 });
 
 describe("CANONICAL_WEBHOOK_EVENT_SET + isCanonicalWebhookEvent", () => {
   it("set mirrors the union exactly", () => {
-    assert.equal(CANONICAL_WEBHOOK_EVENT_SET.size, 32);
-    for (const e of EXPECTED_32) {
+    assert.equal(CANONICAL_WEBHOOK_EVENT_SET.size, 33);
+    for (const e of EXPECTED_33) {
       assert.ok(CANONICAL_WEBHOOK_EVENT_SET.has(e), `set missing ${e}`);
     }
   });
   it("guard accepts every canonical event (incl. reserved)", () => {
-    for (const e of EXPECTED_32) {
+    for (const e of EXPECTED_33) {
       assert.equal(isCanonicalWebhookEvent(e), true, `guard rejected ${e}`);
     }
   });
@@ -179,7 +215,7 @@ describe("normalizeWebhookEvent — deterministic legacy → canonical folds", (
   });
 
   it("a canonical input normalizes to itself (incl. reserved)", () => {
-    for (const e of EXPECTED_32) {
+    for (const e of EXPECTED_33) {
       assert.equal(normalizeWebhookEvent(e), e, `${e} should be unchanged`);
     }
   });
