@@ -84,7 +84,7 @@ ESM-only build, but exposed under `import`/`require`/`default` (Node ≥22.12
 
 ```bash
 npm install
-npm run build   # tsc → dist/ (committed)
+npm run compile   # tsc → dist/ (committed)
 npm test        # build + node --test
 ```
 
