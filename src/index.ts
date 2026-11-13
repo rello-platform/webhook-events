@@ -109,6 +109,15 @@ export const WEBHOOK_EVENTS = [
   // closeDate}). ONE literal — `rello.home_sold` — shared with the internal
   // signal type of the same name in @rello-platform/signals (v0.27.0).
   "rello.home_sold",
+  // RATES (v0.10.0, Platform KA prompt 1026) — PathfinderPro tells Rello that a
+  // tenant's borrower-facing rates changed (a lender's own rate sheet moved:
+  // tenant ingest, manual publish, or the platform-library fan-out) through
+  // POST /api/v1/rates/refreshed, and Rello enqueues this event to that tenant's
+  // subscribed endpoints. Home Scout subscribes: Rate Watch re-prices saved
+  // scenarios. Per-tenant (unlike the national-average `rate.changed`). Delivery
+  // `data` is { relloTenantId, occurredAt, seq, lenderIds[], effectiveAt } and
+  // carries no rates; the receiver reads current rates itself.
+  "rates.refreshed",
 ] as const;
 
 /** The canonical outbound webhook event type — byte-identical to today's 28. */
@@ -213,6 +222,12 @@ export const EXACT_REGISTRY: Record<WebhookEvent, WebhookEventEntry> = {
   // manual SellerListing→SOLD completeness PATCH). ONLY The Oven subscribes.
   "rello.home_sold": {
     event: "rello.home_sold",
+    lifecycle: "active",
+  },
+  // RATES — Rello-emitted per tenant from PathfinderPro's
+  // POST /api/v1/rates/refreshed. Home Scout subscribes.
+  "rates.refreshed": {
+    event: "rates.refreshed",
     lifecycle: "active",
   },
 };

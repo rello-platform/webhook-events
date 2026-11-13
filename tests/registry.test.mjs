@@ -11,8 +11,9 @@ import {
 
 // The canonical set = the original 28 (verbatim from Rello webhook-events.ts @
 // d4a870fe) + RATE-ENGINE `rate.changed` + PHONE-DISCONNECTED + OVEN-REFERRAL +
-// REHOME `home_purchased` (buy-side) + REHOME `home_sold` (sell-side) = 33.
-const EXPECTED_33 = [
+// REHOME `home_purchased` (buy-side) + REHOME `home_sold` (sell-side) +
+// RATES `rates.refreshed` (a tenant's own rates changed) = 34.
+const EXPECTED_34 = [
   "lead.created",
   "lead.updated",
   "lead.deleted",
@@ -56,6 +57,10 @@ const EXPECTED_33 = [
   // funded/recorded close carrying the sold property identity. ONLY The Oven
   // subscribes (it has the receiver; OHH emits, HH has no consumer).
   "rello.home_sold",
+  // RATES (+1, v0.10.0, Platform KA prompt 1026): PathfinderPro reports a
+  // tenant's borrower-facing rates changed; Rello fans it out. Home Scout
+  // subscribes (Rate Watch re-prices saved scenarios).
+  "rates.refreshed",
 ];
 
 // The phantom-7 — allowlisted but never emitted (SPEC OQ-1).
@@ -69,9 +74,9 @@ const EXPECTED_RESERVED = [
   "thread.archived",
 ];
 
-describe("WEBHOOK_EVENTS — canonical 33, byte-identical & ordered", () => {
-  it("is exactly the 33 events in declaration order", () => {
-    assert.deepEqual([...WEBHOOK_EVENTS], EXPECTED_33);
+describe("WEBHOOK_EVENTS — canonical 34, byte-identical & ordered", () => {
+  it("is exactly the 34 events in declaration order", () => {
+    assert.deepEqual([...WEBHOOK_EVENTS], EXPECTED_34);
   });
   it("has no duplicates", () => {
     assert.equal(new Set(WEBHOOK_EVENTS).size, WEBHOOK_EVENTS.length);
@@ -80,7 +85,7 @@ describe("WEBHOOK_EVENTS — canonical 33, byte-identical & ordered", () => {
 
 describe("EXACT_REGISTRY — per-key completeness & lifecycle partition", () => {
   it("has exactly one row per canonical event (no missing, no stray)", () => {
-    assert.deepEqual(Object.keys(EXACT_REGISTRY).sort(), [...EXPECTED_33].sort());
+    assert.deepEqual(Object.keys(EXACT_REGISTRY).sort(), [...EXPECTED_34].sort());
   });
   it("each row's `event` matches its key", () => {
     for (const [key, entry] of Object.entries(EXACT_REGISTRY)) {
@@ -102,14 +107,14 @@ describe("EXACT_REGISTRY — per-key completeness & lifecycle partition", () => 
       .sort();
     assert.deepEqual(reserved, [...EXPECTED_RESERVED].sort());
   });
-  it("partitions 26 active / 7 reserved", () => {
+  it("partitions 27 active / 7 reserved", () => {
     const active = Object.values(EXACT_REGISTRY).filter(
       (e) => e.lifecycle === "active",
     );
     const reserved = Object.values(EXACT_REGISTRY).filter(
       (e) => e.lifecycle === "reserved",
     );
-    assert.equal(active.length, 26);
+    assert.equal(active.length, 27);
     assert.equal(reserved.length, 7);
   });
 });
@@ -147,13 +152,13 @@ describe("rello.home_sold — REHOME between-homes registration (v0.8.0)", () =>
 
 describe("CANONICAL_WEBHOOK_EVENT_SET + isCanonicalWebhookEvent", () => {
   it("set mirrors the union exactly", () => {
-    assert.equal(CANONICAL_WEBHOOK_EVENT_SET.size, 33);
-    for (const e of EXPECTED_33) {
+    assert.equal(CANONICAL_WEBHOOK_EVENT_SET.size, 34);
+    for (const e of EXPECTED_34) {
       assert.ok(CANONICAL_WEBHOOK_EVENT_SET.has(e), `set missing ${e}`);
     }
   });
   it("guard accepts every canonical event (incl. reserved)", () => {
-    for (const e of EXPECTED_33) {
+    for (const e of EXPECTED_34) {
       assert.equal(isCanonicalWebhookEvent(e), true, `guard rejected ${e}`);
     }
   });
@@ -215,7 +220,7 @@ describe("normalizeWebhookEvent — deterministic legacy → canonical folds", (
   });
 
   it("a canonical input normalizes to itself (incl. reserved)", () => {
-    for (const e of EXPECTED_33) {
+    for (const e of EXPECTED_34) {
       assert.equal(normalizeWebhookEvent(e), e, `${e} should be unchanged`);
     }
   });
@@ -239,5 +244,23 @@ describe("normalizeWebhookEvent — deterministic legacy → canonical folds", (
     assert.equal(normalizeWebhookEvent(""), null);
     assert.equal(normalizeWebhookEvent("LEAD.CREATED"), null);
     assert.equal(normalizeWebhookEvent("contact"), null);
+  });
+});
+
+describe("rates.refreshed — a tenant's rates changed (v0.10.0, Platform KA prompt 1026)", () => {
+  it("is a canonical event", () => {
+    assert.ok(WEBHOOK_EVENTS.includes("rates.refreshed"), "rates.refreshed missing from WEBHOOK_EVENTS");
+    assert.equal(isCanonicalWebhookEvent("rates.refreshed"), true);
+    assert.ok(CANONICAL_WEBHOOK_EVENT_SET.has("rates.refreshed"));
+  });
+  it("has an EXACT_REGISTRY row with lifecycle 'active' (Rello-emitted)", () => {
+    const entry = EXACT_REGISTRY["rates.refreshed"];
+    assert.ok(entry, "no EXACT_REGISTRY row for rates.refreshed");
+    assert.equal(entry.event, "rates.refreshed");
+    assert.equal(entry.lifecycle, "active");
+  });
+  it("normalizes to itself and is distinct from rate.changed", () => {
+    assert.equal(normalizeWebhookEvent("rates.refreshed"), "rates.refreshed");
+    assert.notEqual(normalizeWebhookEvent("rates.refreshed"), "rate.changed");
   });
 });
